@@ -4,7 +4,7 @@
 #include <stdlib.h>
 
 #define BUFSIZE 	2048
-#define ROTATEINTERVAL	3600
+#define ROTATEINTERVAL	600
 
 int
 main(int argc, char **argv)
