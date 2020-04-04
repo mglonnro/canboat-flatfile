@@ -11,7 +11,7 @@ main(int argc, char **argv)
 {
 
   if (argc < 2) {
-    printf("usage: %s <basename>\n", argv[0]);
+    printf("usage: %s <basename> [boatId] [done]\n", argv[0]);
     return 1;
   }
 
@@ -35,10 +35,28 @@ main(int argc, char **argv)
       // Changing file
       if (f) {
 	fclose(f);
-	// Zip it
-        char cmd[2048];
-        sprintf(cmd, "nice -n 10 gzip %s", fname);
-        system(cmd);
+  	strcpy(transfername, fname);
+	
+	if (fork() == 0) {
+          char cmd[2048];
+
+	  // Zip it
+          sprintf(cmd, "nice -n 10 gzip %s", transfername);
+          system(cmd);
+
+	  if (argc == 4) {
+	    // Upload it
+	    sprintf(cmd, "nice -n 10 ./upload.js %s %s", argv[2], transfername);
+	    int ret = system(cmd);
+	    if (!ret) {
+	      // Move to done
+	      sprintf(cmd, "nice -n 10 mv %s %s", transfername, argv[3]); 
+	      system(cmd);
+	    } 
+	  }
+
+	  exit(0);
+	}
       }
 
       sprintf(fname, "%s-%d%02d%02d-%02d%02d%02d.log", argv[1], tm.tm_year + 1900, tm.tm_mon+1, tm.tm_mday, tm.tm_hour, tm.tm_min, tm.tm_sec);
