@@ -2,9 +2,12 @@
 #include <string.h>
 #include <time.h> 
 #include <stdlib.h>
+#include <sys/types.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #define BUFSIZE 	2048
-#define ROTATEINTERVAL	600
+#define ROTATEINTERVAL	300
 
 int
 main(int argc, char **argv)
@@ -23,13 +26,18 @@ main(int argc, char **argv)
 
   while (fgets(str, sizeof str, stdin) != NULL) {
     // File handling
-    char fname[256];
+    char fname[256], transfername[256];
     
     time_t t = time(NULL);
     struct tm tm = *localtime(&t);
    
     
     if (!f || t > (prevtime + ROTATEINTERVAL)) {
+      // Clear zombies
+      int status;
+      while (waitpid(-1, &status, WNOHANG) > 0)
+	;
+
       prevtime = t;
 
       // Changing file
@@ -45,17 +53,27 @@ main(int argc, char **argv)
           system(cmd);
 
 	  if (argc == 4) {
+
+	    int retries = 3, done = 0;
+
+	    while (!done && retries > 0) {
 	    // Upload it
-	    sprintf(cmd, "nice -n 10 ./upload.js %s %s", argv[2], transfername);
+	    sprintf(cmd, "nice -n 10 charlotte-upload %s %s.gz", argv[2], transfername);
 	    int ret = system(cmd);
 	    if (!ret) {
 	      // Move to done
-	      sprintf(cmd, "nice -n 10 mv %s %s", transfername, argv[3]); 
+	      sprintf(cmd, "nice -n 10 mv %s.gz %s", transfername, argv[3]); 
 	      system(cmd);
+	      done = 1;
+	    } else {
+	      retries --;
 	    } 
+	    }
 	  }
 
 	  exit(0);
+	} else {
+	  //wait(NULL);
 	}
       }
 
